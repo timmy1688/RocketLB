@@ -1,0 +1,13 @@
+/bin/
+/data/
+configs/dev.env
+*.db
+*.db-journal
+
+web/node_modules/
+web/dist/
+
+.DS_Store
+.idea/
+.vscode/
+*.log

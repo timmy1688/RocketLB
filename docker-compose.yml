@@ -1,0 +1,43 @@
+# 控制面是一个镜像，后端和前端都在里面，本身不挂目录。
+# 状态在 Postgres。密钥用环境变量。数据库文件由 Docker volume 保管。
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rocketlb
+      POSTGRES_PASSWORD: rocketlb
+      POSTGRES_DB: rocketlb
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rocketlb -d rocketlb"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  rocketlb:
+    build: .
+    image: rocketlb:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ROCKETLB_HTTP_ADDR: :8080
+      ROCKETLB_ENV: production
+      ROCKETLB_DB_DRIVER: postgres
+      ROCKETLB_DB_DSN: postgres://rocketlb:rocketlb@postgres:5432/rocketlb?sslmode=disable
+      ROCKETLB_WEB_DIST: /app/web/dist
+      ROCKETLB_ADMIN_USER: ${ROCKETLB_ADMIN_USER:-admin}
+      ROCKETLB_ADMIN_PASSWORD: ${ROCKETLB_ADMIN_PASSWORD:-admin}
+      ROCKETLB_JWT_SECRET: ${ROCKETLB_JWT_SECRET:-rocketlb-jwt-secret-change-me}
+      ROCKETLB_DATA_KEY: ${ROCKETLB_DATA_KEY:-cm9ja2V0bGItZGF0YS1rZXktY2hhbmdlLW1lISEhISE=}
+    ports:
+      - "8080:8080"
+
+volumes:
+  pg_data:
